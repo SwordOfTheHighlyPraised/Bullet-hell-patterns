@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d624529867abc8b4c89687845e1a108a, type: 3}
+  m_Name: SpreadPattern
+  m_EditorClassIdentifier: 
+  bulletPrefab: {fileID: 2009350144482145695, guid: 5351e8a72579c59488dda12cda354a0a, type: 3}
+  bulletSpeed: 5
+  acceleration: 0
+  moveToPlayer: 1
+  fireAngle: 0
+  numberOfArrays: 1
+  arrayAngleDifference: 180
+  numberOfBulletsPerArray: 5
+  individualArraySpread: 30
+  totalBulletArrays: 3
+  totalArraySpread: 90
+  sineAmplitude: 1
+  sineFrequency: 1
+  enableSineWave: 0
+  enableSpiral: 0
+  spiralSpeed: 45
+  spiralClockwise: 1
+  enableHoming: 0
+  maxStops: 1
+  stopDuration: 1
+  initialMovementTime: 1
+  curveDuration: 0.5
+  bulletCount: 5
+  spreadAngle: 30
+  spreadDistance: 1
