@@ -5,7 +5,7 @@ using UnityEngine;
 public class Health : MonoBehaviour
 {
     public int maxHealth = 100;  // Maximum health
-    private int currentHealth;
+    public int currentHealth;
 
     public bool isPlayer;        // Toggle to indicate if this is the player
 
