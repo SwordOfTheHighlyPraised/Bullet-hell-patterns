@@ -13,28 +13,41 @@ MonoBehaviour:
   m_Name: ConePattern
   m_EditorClassIdentifier: 
   bulletPrefab: {fileID: 2009350144482145695, guid: 5351e8a72579c59488dda12cda354a0a, type: 3}
-  bulletSpeed: 5
-  acceleration: 0
-  moveToPlayer: 0
+  bulletSpeed: 2
+  acceleration: 1
+  bulletLifespan: 5
+  objectWidth: 0.1
+  objectHeight: 0.1
+  xOffset: 0
+  yOffset: 0
+  moveToPlayer: 1
   fireAngle: 0
   numberOfBulletsPerArray: 1
   individualArraySpread: 1
   totalBulletArrays: 2
-  totalArraySpread: 179
-  sineAmplitude: 1
-  sineFrequency: 1
+  totalArraySpread: 38
+  enableSpin: 0
+  currentSpinSpeed: 0
+  spinSpeedChangeRate: 0
+  maxSpinSpeed: 180
+  spinReversal: 0
+  sineAmplitude: 5
+  sineFrequency: 5.77
   enableSineWave: 0
+  cosineAmplitude: 1
+  cosineFrequency: 1
+  enableCosineWave: 0
   enableSpiral: 0
-  spiralSpeed: 45
+  spiralSpeed: 79
   spiralClockwise: 1
   enableHoming: 0
   maxStops: 1
   stopDuration: 1
   initialMovementTime: 1
   curveDuration: 0.5
-  coneLayers: 3
-  bulletsPerLayer: 6
-  tipSpreadAngle: 15
-  baseSpreadAngle: 45
-  tipDistance: 1
-  baseDistance: 3
+  coneLayers: 2
+  bulletsPerLayer: 2
+  tipSpreadAngle: 2
+  baseSpreadAngle: 4
+  tipDistance: 0.1
+  baseDistance: 0.2

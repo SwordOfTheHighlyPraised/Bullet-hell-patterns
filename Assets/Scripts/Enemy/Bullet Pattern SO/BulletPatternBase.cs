@@ -7,6 +7,19 @@ public abstract class BulletPatternBase : ScriptableObject
     public GameObject bulletPrefab;
     public float bulletSpeed = 5f;              // Initial bullet speed from ScriptableObject
     public float acceleration = 0f;             // Rate of acceleration
+    public float bulletLifespan = 5f;           // Lifespan of the bullet (in seconds)
+
+
+    [Header("Offset and Size")]
+    [SerializeField]
+    public float objectWidth = 1f;   // Width of the bullet prefab
+    [SerializeField]
+    public float objectHeight = 1f;  // Height of the bullet prefab
+    [SerializeField]
+    public float xOffset = 0f;       // X offset for bullet spawn position
+    [SerializeField]
+    public float yOffset = 0f;       // Y offset for bullet spawn position
+
 
     [Header("Movement Settings")]
     public bool moveToPlayer = true;            // Toggle to decide if the bullet should move towards the player
@@ -25,10 +38,23 @@ public abstract class BulletPatternBase : ScriptableObject
     [SerializeField, Range(0, 360)]
     public float totalArraySpread = 90f;  // Spread between bullet arrays (1-360)
 
+    [Header("Spin Settings")]
+    public bool enableSpin = false;                  // Enable spin functionality
+    [Range(-360f, 360f)] public float currentSpinSpeed = 0f; // Current spin speed (degrees per second)
+    [Range(-180f, 180f)] public float spinSpeedChangeRate = 0f; // Rate of change of spin speed
+    [Range(0f, 360f)] public float maxSpinSpeed = 180f; // Maximum spin speed (0-360)
+    public bool spinReversal = false;                // Reverse spin when max/min speed is reached
+
     [Header("Sine Wave Settings")]
     [Range(-5f, 5f)] public float sineAmplitude = 1f;   // Sine wave amplitude (range: -5 to 5)
     [Range(-10f, 10f)] public float sineFrequency = 1f;  // Sine wave frequency (range: -10 to 10)
     public bool enableSineWave = false;                // Enable sine wave movement
+
+    [Header("Cosine Wave Settings")]
+    [Range(-5f, 5f)] public float cosineAmplitude = 1f;   // Cosine wave amplitude (range: -5 to 5)
+    [Range(-10f, 10f)] public float cosineFrequency = 1f;  // Cosine wave frequency (range: -10 to 10)
+    public bool enableCosineWave = false;              // Enable cosine wave movement
+
 
     [Header("Spiral Settings")]
     public bool enableSpiral = false;                  // Enable spiral movement
@@ -43,6 +69,7 @@ public abstract class BulletPatternBase : ScriptableObject
     public float curveDuration = 0.5f;                 // Time it takes to curve to the new direction
 
     private float currentAngle = 0f;  // Used to track the angle for spinning or spiraling
+    private bool useSineWave = true;  // Tracks whether the current bullet should use sine or cosine wave
 
     public void SetTotalBulletArrays(int arrays)
     {
@@ -56,7 +83,7 @@ public abstract class BulletPatternBase : ScriptableObject
 
     public virtual void Fire(Transform firePoint, Transform player = null)
     {
-        SpawnBullets(firePoint, player);
+        SpawnBullets(firePoint, player); // Respect the pattern
     }
 
     public void SpawnBullets(Transform firePoint, Transform player)
@@ -89,8 +116,31 @@ public abstract class BulletPatternBase : ScriptableObject
                 // Get the direction to fire in, based on the final rotation
                 Vector3 directionToFire = GetDirectionFromAngle(finalRotation, firePoint, player);
 
-                // Instantiate and initialize the bullet
-                GameObject bullet = Instantiate(bulletPrefab, firePoint.position, Quaternion.identity);
+                // Adjust the spawn position based on offsets
+                Vector3 spawnPosition = new Vector3(
+                    firePoint.position.x + xOffset,
+                    firePoint.position.y + yOffset,
+                    firePoint.position.z
+                );
+
+                // Instantiate and initialize the bullet with offset
+                GameObject bullet = Instantiate(bulletPrefab, spawnPosition, Quaternion.identity);
+
+                // Adjust the size of the bullet
+                bullet.transform.localScale = new Vector3(objectWidth, objectHeight, 1f);
+
+                // Forcefully adjust the CircleCollider2D size based on objectWidth and objectHeight
+                CircleCollider2D collider = bullet.GetComponent<CircleCollider2D>();
+                if (collider != null)
+                {
+                    // Calculate the collider radius based on the object dimensions
+                    float colliderRadius = Mathf.Min(objectWidth, objectHeight) / 2f; // Scale down for a better fit
+                    collider.radius = colliderRadius; // Apply the radius adjustment
+                }
+                else
+                {
+                    Debug.LogWarning("Bullet prefab does not have a CircleCollider2D component.");
+                }
 
                 // Initialize the bullet with the calculated direction
                 InitializeBullet(bullet, firePoint, player, directionToFire);
@@ -101,16 +151,37 @@ public abstract class BulletPatternBase : ScriptableObject
                 if (bulletRb != null)
                 {
                     // Start the bullet with an initial speed based on bulletSpeed
-                    bulletRb.velocity = new Vector2(
-                        Mathf.Cos(finalRotation * Mathf.Deg2Rad) * bulletSpeed,
-                        Mathf.Sin(finalRotation * Mathf.Deg2Rad) * bulletSpeed
-                    );
+                    bulletRb.velocity = directionToFire * bulletSpeed;
                 }
+
+                // Destroy the bullet after the lifespan duration
+                Destroy(bullet, bulletLifespan);
+            }
+
+            // Update fireAngle and spin logic per shot
+            if (enableSpin)
+            {
+                // Change the fireAngle for the next shot based on the spin speed
+                fireAngle += currentSpinSpeed;
+
+                // Update the spin speed based on the change rate per shot
+                currentSpinSpeed += spinSpeedChangeRate;
+
+                // Clamp the spin speed to maxSpinSpeed
+                currentSpinSpeed = Mathf.Clamp(currentSpinSpeed, -maxSpinSpeed, maxSpinSpeed);
+
+                // Reverse spin direction if necessary
+                if (spinReversal && (Mathf.Abs(currentSpinSpeed) >= maxSpinSpeed))
+                {
+                    spinSpeedChangeRate = -spinSpeedChangeRate;  // Reverse spin direction
+                }
+
+                // Normalize the fireAngle to keep it within the 0-359 range
+                fireAngle = fireAngle % 360f;
+                if (fireAngle < 0f)
+                    fireAngle += 360f;
             }
         }
-
-        // Update the angle for the next spawn, adding the current spin speed to create the difference for the next bullet
-        currentAngle += fireAngle;
     }
 
     // Method to get the direction based on a specific angle (in degrees) relative to the firing point or player
@@ -145,10 +216,30 @@ public abstract class BulletPatternBase : ScriptableObject
                 // Start acceleration if needed
                 monoBehaviour.StartCoroutine(AccelerateBullet(rb, direction, bulletSpeed));
 
+                // If both sine and cosine are enabled, alternate between them
+                if (enableSineWave && enableCosineWave)
+                {
+                    if (useSineWave)
+                    {
+                        monoBehaviour.StartCoroutine(MoveBulletWithSineWave(bullet.transform, direction));
+                    }
+                    else
+                    {
+                        monoBehaviour.StartCoroutine(MoveBulletWithCosineWave(bullet.transform, direction));
+                    }
+                    useSineWave = !useSineWave; // Alternate between sine and cosine
+                }
+
                 // Start sine wave movement if enabled for this bullet
                 if (enableSineWave)
                 {
                     monoBehaviour.StartCoroutine(MoveBulletWithSineWave(bullet.transform, direction));
+                }
+
+                // Start cosine wave movement if enabled for this bullet
+                if (enableCosineWave)
+                {
+                    monoBehaviour.StartCoroutine(MoveBulletWithCosineWave(bullet.transform, direction));
                 }
 
                 // Start spiral movement if enabled for this bullet
@@ -189,45 +280,51 @@ public abstract class BulletPatternBase : ScriptableObject
         int currentStopCount = 0;
         float currentBulletSpeed = bulletSpeed;
 
-        // 1. Initial movement in the initial direction for the configured time
-        Vector3 direction = GetInitialBulletDirection(firePoint, player);
+        // 1. Initial movement according to the bullet pattern
+        Vector3 direction = rb.velocity.normalized; // Store the current direction of the bullet
         float elapsedTime = 0f;
 
+        // Ensure the bullet follows the initial firing direction for the configured initial movement time
         while (elapsedTime < initialMovementTime)
         {
             if (bulletTransform == null) yield break;
 
             elapsedTime += Time.deltaTime;
             currentBulletSpeed += acceleration * Time.deltaTime;  // Apply acceleration
-            rb.velocity = direction * currentBulletSpeed;         // Update bullet velocity
+            rb.velocity = direction * currentBulletSpeed;         // Update bullet velocity to maintain direction
             yield return null;
         }
 
-        // 2. Stop and redirect behavior
+        // 2. Stop and redirect behavior (homing)
         while (currentStopCount < maxStops)
         {
             if (bulletTransform == null || player == null) yield break;
 
-            // Stop the bullet
+            // Stop the bullet by setting its velocity to zero
             rb.velocity = Vector2.zero;
-            yield return new WaitForSeconds(stopDuration);  // Wait for the stop duration
 
-            // Calculate new direction towards the player
+            // Ensure the bullet remains stopped during the stopDuration
+            float stopElapsedTime = 0f;
+            while (stopElapsedTime < stopDuration)
+            {
+                stopElapsedTime += Time.deltaTime;
+                rb.velocity = Vector2.zero;  // Keep velocity zero during the stop
+                yield return null;
+            }
+
+            // After stopping, calculate the new direction toward the player
             Vector3 newDirection = (player.position - bulletTransform.position).normalized;
 
-            // Curve smoothly into the new direction
-            yield return CurveBulletDirection(bulletTransform, direction, newDirection, currentBulletSpeed, rb);
-
-            // Update the direction
+            // Update direction and velocity
             direction = newDirection;
 
-            // Move in the new direction after the stop
+            // Apply new velocity after the stop
             elapsedTime = 0f;
             while (elapsedTime < initialMovementTime && bulletTransform != null)
             {
                 elapsedTime += Time.deltaTime;
                 currentBulletSpeed += acceleration * Time.deltaTime;  // Apply acceleration
-                rb.velocity = direction * currentBulletSpeed;         // Update bullet velocity
+                rb.velocity = direction * currentBulletSpeed;         // Update bullet velocity to move towards the player
                 yield return null;
             }
 
@@ -243,8 +340,9 @@ public abstract class BulletPatternBase : ScriptableObject
         }
     }
 
-    // Coroutine to smoothly curve the bullet's direction between two vectors
-    protected IEnumerator CurveBulletDirection(Transform bulletTransform, Vector3 oldDirection, Vector3 newDirection, float currentBulletSpeed, Rigidbody2D rb)
+
+    // This method smoothly curves the bullet toward the new direction during stops
+    protected IEnumerator CurveBulletDirection(Transform bulletTransform, Vector3 oldDirection, Vector3 newDirection, float currentBulletSpeed, Rigidbody2D rb, Transform player)
     {
         float curveElapsedTime = 0f;
 
@@ -254,14 +352,16 @@ public abstract class BulletPatternBase : ScriptableObject
 
             curveElapsedTime += Time.deltaTime;
 
-            // Lerp between the old direction and the new direction
+            // Continuously adjust the new direction during the curve
+            newDirection = (player.position - bulletTransform.position).normalized;
+
+            // Lerp between the old direction and the new direction for a smooth curve
             Vector3 curvedDirection = Vector3.Lerp(oldDirection, newDirection, curveElapsedTime / curveDuration).normalized;
 
-            // Apply acceleration
+            // Move the bullet toward the new direction gradually, applying speed and acceleration
             currentBulletSpeed += acceleration * Time.deltaTime;
-
-            // Move the bullet in the curved direction using velocity
             rb.velocity = curvedDirection * currentBulletSpeed;
+
             yield return null;
         }
     }
@@ -273,14 +373,47 @@ public abstract class BulletPatternBase : ScriptableObject
         {
             currentBulletSpeed += acceleration * Time.deltaTime;
             rb.velocity = moveDirection * currentBulletSpeed;
+
+            // Update the rotation to face the new movement direction
+            float angle = Mathf.Atan2(rb.velocity.y, rb.velocity.x) * Mathf.Rad2Deg;
+            rb.transform.rotation = Quaternion.Euler(0, 0, angle);
+
             yield return null;
         }
     }
+
+    // Coroutine for cosine wave movement
+    protected IEnumerator MoveBulletWithCosineWave(Transform bulletTransform, Vector3 moveDirection)
+    {
+        float elapsedTime = 0f;
+        Rigidbody2D rb = bulletTransform.GetComponent<Rigidbody2D>();  // Get the Rigidbody2D component
+
+        while (bulletTransform != null)
+        {
+            elapsedTime += Time.deltaTime;
+
+            // Apply cosine wave movement on top of forward movement
+            float cosineWaveOffset = Mathf.Cos(elapsedTime * cosineFrequency) * cosineAmplitude;
+
+            // Perpendicular direction for cosine wave movement
+            Vector3 perpendicularDirection = new Vector3(-moveDirection.y, moveDirection.x, 0f);
+
+            // Apply cosine wave movement
+            Vector3 cosineWaveMovement = perpendicularDirection * cosineWaveOffset;
+
+            // Update the bullet's position with cosine wave
+            bulletTransform.position += cosineWaveMovement * Time.deltaTime;
+
+            yield return null;
+        }
+    }
+
 
     // Sine wave movement coroutine
     protected IEnumerator MoveBulletWithSineWave(Transform bulletTransform, Vector3 moveDirection)
     {
         float elapsedTime = 0f;
+        Rigidbody2D rb = bulletTransform.GetComponent<Rigidbody2D>();  // Get the Rigidbody2D component
 
         while (bulletTransform != null)
         {
@@ -307,6 +440,7 @@ public abstract class BulletPatternBase : ScriptableObject
     {
         float elapsedTime = 0f;
         float currentAngle = 0f;
+        Rigidbody2D rb = bulletTransform.GetComponent<Rigidbody2D>();  // Get the Rigidbody2D component
 
         while (bulletTransform != null)
         {
@@ -314,10 +448,43 @@ public abstract class BulletPatternBase : ScriptableObject
             currentAngle += spiralClockwise ? spiralSpeed * Time.deltaTime : -spiralSpeed * Time.deltaTime;
             float radius = currentBulletSpeed * elapsedTime;
             Vector3 rotatedDirection = Quaternion.Euler(0, 0, currentAngle) * directionToPlayer;
-            float x = rotatedDirection.x * radius;
-            float y = rotatedDirection.y * radius;
-            bulletTransform.position = new Vector3(origin.x + x, origin.y + y, bulletTransform.position.z);
+
+            // Update bullet position to move outward in a spiral pattern
+            bulletTransform.position = new Vector3(origin.x + rotatedDirection.x * radius, origin.y + rotatedDirection.y * radius, bulletTransform.position.z);
+
             yield return null;
         }
+    }
+    // New method to fire bullets in a specific direction
+    public virtual void FireInDirection(Transform firePoint, Vector3 direction)
+    {
+        if (bulletPrefab == null) return;
+
+        // Calculate the spawn position with offsets
+        Vector3 spawnPosition = new Vector3(
+            firePoint.position.x + xOffset,
+            firePoint.position.y + yOffset,
+            firePoint.position.z
+        );
+
+        // Instantiate the bullet
+        GameObject bullet = Instantiate(bulletPrefab, spawnPosition, Quaternion.identity);
+
+        // Adjust the size of the bullet
+        bullet.transform.localScale = new Vector3(objectWidth, objectHeight, 1f);
+
+        // Get the Rigidbody2D and set its velocity in the specified direction
+        Rigidbody2D rb = bullet.GetComponent<Rigidbody2D>();
+        if (rb != null)
+        {
+            rb.velocity = direction.normalized * bulletSpeed;
+
+            // Optionally, adjust the rotation of the bullet to face the movement direction
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            bullet.transform.rotation = Quaternion.Euler(0, 0, angle);
+        }
+
+        // Destroy the bullet after its lifespan
+        Destroy(bullet, bulletLifespan);
     }
 }

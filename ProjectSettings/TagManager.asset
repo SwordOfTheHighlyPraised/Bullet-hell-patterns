@@ -7,6 +7,7 @@ TagManager:
   - Through
   - OneWayPlatform
   - World Edge
+  - Boss
   layers:
   - Default
   - TransparentFX

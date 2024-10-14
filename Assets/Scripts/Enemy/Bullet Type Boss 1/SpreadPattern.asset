@@ -13,27 +13,38 @@ MonoBehaviour:
   m_Name: SpreadPattern
   m_EditorClassIdentifier: 
   bulletPrefab: {fileID: 2009350144482145695, guid: 5351e8a72579c59488dda12cda354a0a, type: 3}
-  bulletSpeed: 5
-  acceleration: 0
+  bulletSpeed: 2
+  acceleration: 5
+  bulletLifespan: 15
+  objectWidth: 0.1
+  objectHeight: 0.1
+  xOffset: 0
+  yOffset: 0
   moveToPlayer: 1
   fireAngle: 0
-  numberOfArrays: 1
-  arrayAngleDifference: 180
-  numberOfBulletsPerArray: 5
-  individualArraySpread: 30
-  totalBulletArrays: 3
-  totalArraySpread: 90
-  sineAmplitude: 1
-  sineFrequency: 1
+  numberOfBulletsPerArray: 1
+  individualArraySpread: 1
+  totalBulletArrays: 1
+  totalArraySpread: 0
+  enableSpin: 0
+  currentSpinSpeed: 0
+  spinSpeedChangeRate: 5
+  maxSpinSpeed: 5
+  spinReversal: 1
+  sineAmplitude: 3.38
+  sineFrequency: -6.34
   enableSineWave: 0
+  cosineAmplitude: 1
+  cosineFrequency: 1
+  enableCosineWave: 0
   enableSpiral: 0
-  spiralSpeed: 45
+  spiralSpeed: 33
   spiralClockwise: 1
   enableHoming: 0
   maxStops: 1
   stopDuration: 1
   initialMovementTime: 1
   curveDuration: 0.5
-  bulletCount: 5
-  spreadAngle: 30
+  bulletCount: 3
+  spreadAngle: 80
   spreadDistance: 1

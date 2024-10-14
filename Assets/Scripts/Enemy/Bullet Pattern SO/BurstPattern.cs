@@ -28,27 +28,81 @@ public class BurstPattern : BulletPatternBase
     {
         int currentOffsetIndex = 0;
 
+        // Loop through each burst sequence
         for (int i = 0; i < burstCount; i++)
         {
-            // Flip the spiral direction for each burst (e.g., clockwise for even bursts, counter-clockwise for odd)
-            bool currentSpiralDirection = (i % 2 == 0) ? true : false;
-
-            // Fire bulletsPerLocation bullets from the same offset position
-            for (int j = 0; j < bulletsPerLocation; j++)
+            // Calculate spin and update fireAngle before firing bullets in the burst
+            if (enableSpin)
             {
-                // Calculate the offset position
-                Vector3 offsetPosition = firePoint.position + (Vector3)fireOffsets[currentOffsetIndex];
+                // Update the fireAngle based on the current spin speed
+                fireAngle += currentSpinSpeed;
 
-                // Instantiate a bullet at the offset position
-                GameObject bullet = Instantiate(bulletPrefab, offsetPosition, Quaternion.identity);
+                // Update the spin speed based on the spin change rate
+                currentSpinSpeed += spinSpeedChangeRate;
 
-                // Get the direction to the player or use the angle based on the movement settings
-                Vector3 directionToPlayer = GetInitialBulletDirection(firePoint, player);
+                // Clamp the spin speed to the max spin speed
+                currentSpinSpeed = Mathf.Clamp(currentSpinSpeed, -maxSpinSpeed, maxSpinSpeed);
 
-                // Initialize the bullet to follow the movement settings (sine, spiral, etc.)
-                InitializeBurstBullet(bullet, directionToPlayer, currentSpiralDirection, firePoint, player);
+                // Reverse the spin direction if it reaches the max or min spin speed
+                if (spinReversal && (Mathf.Abs(currentSpinSpeed) >= maxSpinSpeed))
+                {
+                    spinSpeedChangeRate = -spinSpeedChangeRate; // Reverse spin direction
+                }
 
-                yield return new WaitForSeconds(burstFireRate);  // Wait between bullets in the same burst
+                // Normalize the fireAngle to stay within 0-359 degrees
+                fireAngle = fireAngle % 360f;
+                if (fireAngle < 0f)
+                {
+                    fireAngle += 360f;
+                }
+            }
+
+            // Fire for each array in the current burst
+            for (int arrayIndex = 0; arrayIndex < totalBulletArrays; arrayIndex++)
+            {
+                // Offset for different bullet arrays (rotates around a central point)
+                float arrayRotationOffset = (arrayIndex - (totalBulletArrays / 2f)) * totalArraySpread;
+
+                // Calculate directionToPlayer if moveToPlayer is enabled
+                Vector3 directionToFire;
+                if (moveToPlayer && player != null)
+                {
+                    // Get direction to the player for the entire array
+                    directionToFire = (player.position - firePoint.position).normalized;
+                }
+                else
+                {
+                    // Use fireAngle + array offset if not moving to the player
+                    directionToFire = GetDirectionFromAngle(fireAngle + arrayRotationOffset, firePoint, player);
+                }
+
+                // Fire bulletsPerLocation bullets from the same offset position
+                for (int j = 0; j < bulletsPerLocation; j++)
+                {
+                    // Calculate the offset position based on fireOffsets array and apply the X and Y offsets
+                    Vector3 offsetPosition = new Vector3(
+                        firePoint.position.x + xOffset + fireOffsets[currentOffsetIndex].x, // Apply X offset
+                        firePoint.position.y + yOffset + fireOffsets[currentOffsetIndex].y, // Apply Y offset
+                        firePoint.position.z
+                    );
+
+                    // Instantiate a bullet at the offset position
+                    GameObject bullet = Instantiate(bulletPrefab, offsetPosition, Quaternion.identity);
+
+                    // Adjust the bullet size
+                    bullet.transform.localScale = new Vector3(objectWidth, objectHeight, 1f); // Set the bullet size
+
+                    // Adjust the direction slightly for the array spread
+                    Vector3 finalDirection = Quaternion.Euler(0, 0, arrayRotationOffset) * directionToFire;
+
+                    // Initialize the bullet to follow the movement settings (sine, spiral, etc.)
+                    InitializeBurstBullet(bullet, finalDirection, i % 2 == 0, firePoint, player);
+
+                    // Destroy the bullet after the specified lifespan
+                    Destroy(bullet, bulletLifespan);  // Destroy the bullet after its lifespan expires
+
+                    yield return new WaitForSeconds(burstFireRate);  // Wait between bullets in the same burst
+                }
             }
 
             // Switch to the next offset position
@@ -60,13 +114,13 @@ public class BurstPattern : BulletPatternBase
     }
 
     // Initialize the bullet and follow base movement settings (sine wave, spiral, etc.)
-    private void InitializeBurstBullet(GameObject bullet, Vector3 directionToPlayer, bool spiralClockwise, Transform firePoint, Transform player)
+    private void InitializeBurstBullet(GameObject bullet, Vector3 directionToFire, bool spiralClockwise, Transform firePoint, Transform player)
     {
         // Temporarily set the spiral direction for this bullet
         BulletPatternBase patternBase = this;
         patternBase.spiralClockwise = spiralClockwise;
 
         // Initialize the bullet using the base class method with movement settings
-        InitializeBullet(bullet, firePoint, player, directionToPlayer);  // Pass directionToPlayer
+        InitializeBullet(bullet, firePoint, player, directionToFire);  // Pass directionToFire
     }
 }

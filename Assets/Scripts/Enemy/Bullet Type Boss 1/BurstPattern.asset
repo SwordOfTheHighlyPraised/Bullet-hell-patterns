@@ -13,29 +13,42 @@ MonoBehaviour:
   m_Name: BurstPattern
   m_EditorClassIdentifier: 
   bulletPrefab: {fileID: 2009350144482145695, guid: 5351e8a72579c59488dda12cda354a0a, type: 3}
-  bulletSpeed: 5
-  acceleration: 0
-  moveToPlayer: 1
-  fireAngle: 0
-  numberOfArrays: 1
-  arrayAngleDifference: 180
-  numberOfBulletsPerArray: 5
-  individualArraySpread: 30
-  totalBulletArrays: 3
-  totalArraySpread: 90
-  sineAmplitude: 1
-  sineFrequency: 1
+  bulletSpeed: 1
+  acceleration: 0.5
+  bulletLifespan: 10
+  objectWidth: 0.1
+  objectHeight: 0.1
+  xOffset: 0
+  yOffset: 0
+  moveToPlayer: 0
+  fireAngle: 35
+  numberOfBulletsPerArray: 1
+  individualArraySpread: 1
+  totalBulletArrays: 1
+  totalArraySpread: 0
+  enableSpin: 0
+  currentSpinSpeed: 0
+  spinSpeedChangeRate: -5
+  maxSpinSpeed: 5
+  spinReversal: 1
+  sineAmplitude: 1.26
+  sineFrequency: 10
   enableSineWave: 0
+  cosineAmplitude: 5
+  cosineFrequency: 10
+  enableCosineWave: 0
   enableSpiral: 0
-  spiralSpeed: 45
+  spiralSpeed: 26
   spiralClockwise: 1
   enableHoming: 0
   maxStops: 1
   stopDuration: 1
   initialMovementTime: 1
   curveDuration: 0.5
-  bulletsPerLocation: 2
-  burstCount: 6
-  burstFireRate: 0.1
-  burstCountRate: 0.5
-  fireOffsets: []
+  bulletsPerLocation: 10
+  burstCount: 2
+  burstFireRate: 1
+  burstCountRate: 1
+  fireOffsets:
+  - {x: 0, y: -1}
+  - {x: 0, y: 1}

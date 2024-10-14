@@ -13,14 +13,43 @@ public class ConePattern : BulletPatternBase
 
     public override void Fire(Transform firePoint, Transform player = null)
     {
+        if (player == null && moveToPlayer) return; // Ensure player is available if aiming at player
+
+        // Apply spin logic before firing if spin is enabled
+        if (enableSpin)
+        {
+            // Update the fireAngle based on the current spin speed
+            fireAngle += currentSpinSpeed;
+
+            // Update the spin speed based on the spin change rate
+            currentSpinSpeed += spinSpeedChangeRate;
+
+            // Clamp the spin speed to the max spin speed
+            currentSpinSpeed = Mathf.Clamp(currentSpinSpeed, -maxSpinSpeed, maxSpinSpeed);
+
+            // Reverse the spin direction if it reaches the max or min spin speed
+            if (spinReversal && (Mathf.Abs(currentSpinSpeed) >= maxSpinSpeed))
+            {
+                spinSpeedChangeRate = -spinSpeedChangeRate; // Reverse spin direction
+            }
+
+            // Normalize the fireAngle to stay within 0-359 degrees
+            fireAngle = fireAngle % 360f;
+            if (fireAngle < 0f)
+            {
+                fireAngle += 360f;
+            }
+        }
+
         // Loop through each bullet array
         for (int arrayIndex = 0; arrayIndex < totalBulletArrays; arrayIndex++)
         {
             // Offset for different bullet arrays (rotates around a central point)
             float arrayRotationOffset = (arrayIndex - (totalBulletArrays / 2f)) * totalArraySpread;
 
-            // Calculate the base direction based on the firing angle or a predefined direction
-            Vector3 directionToFire = GetDirectionFromAngle(fireAngle + arrayRotationOffset, firePoint, player);
+            // Calculate the base direction towards the player or based on fireAngle
+            Vector3 directionToPlayer = GetInitialBulletDirection(firePoint, player);
+            Vector3 directionToFire = Quaternion.Euler(0, 0, fireAngle + arrayRotationOffset) * directionToPlayer;
 
             // Loop through each layer, ensuring bullets are aligned from tip (closer) to base (further out)
             for (int layer = 0; layer < coneLayers; layer++)
@@ -41,18 +70,30 @@ public class ConePattern : BulletPatternBase
                 // Loop through each bullet in this layer
                 for (int bulletIndex = 0; bulletIndex < bulletsPerLayer; bulletIndex++)
                 {
-                    // Calculate the angle for each bullet
+                    // Calculate the angle for each bullet relative to the player or fire direction
                     float currentAngle = startAngle + (bulletIndex * angleStep);
 
                     // Calculate the spread direction relative to the layer's angle
                     Vector3 bulletDirection = Quaternion.Euler(0, 0, currentAngle) * directionToFire;
 
-                    // Adjust the spawn position based on the layer distance
-                    Vector3 spawnPosition = firePoint.position + bulletDirection * layerDistance;
+                    // Adjust the spawn position based on the layer distance and apply the X and Y offsets
+                    Vector3 spawnPosition = new Vector3(
+                        firePoint.position.x + xOffset + (bulletDirection * layerDistance).x, // Apply X offset
+                        firePoint.position.y + yOffset + (bulletDirection * layerDistance).y, // Apply Y offset
+                        firePoint.position.z
+                    );
 
                     // Instantiate and initialize the bullet with the direction
                     GameObject bullet = Instantiate(bulletPrefab, spawnPosition, Quaternion.identity);
-                    InitializeBullet(bullet, firePoint, player, bulletDirection); // Pass bulletDirection as the required parameter
+
+                    // Adjust the size of the bullet
+                    bullet.transform.localScale = new Vector3(objectWidth, objectHeight, 1f); // Set the bullet size
+
+                    // Initialize the bullet with the calculated direction
+                    InitializeBullet(bullet, firePoint, player, bulletDirection);
+
+                    // Destroy the bullet after the specified lifespan
+                    Destroy(bullet, bulletLifespan); // Destroy the bullet after the lifespan has passed
 
                     // Apply sine wave or spiral movement if enabled
                     MonoBehaviour monoBehaviour = bullet.GetComponent<MonoBehaviour>();

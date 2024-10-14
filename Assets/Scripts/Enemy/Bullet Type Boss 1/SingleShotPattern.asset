@@ -13,22 +13,35 @@ MonoBehaviour:
   m_Name: SingleShotPattern
   m_EditorClassIdentifier: 
   bulletPrefab: {fileID: 2009350144482145695, guid: 5351e8a72579c59488dda12cda354a0a, type: 3}
-  bulletSpeed: 5
-  acceleration: 0
+  bulletSpeed: 1
+  acceleration: 1
+  bulletLifespan: 15
+  objectWidth: 1
+  objectHeight: 0.1
+  xOffset: 0
+  yOffset: 0
   moveToPlayer: 0
-  fireAngle: 0
-  numberOfBulletsPerArray: 2
-  individualArraySpread: 93
-  totalBulletArrays: 10
-  totalArraySpread: 19
-  sineAmplitude: 1
-  sineFrequency: 1
+  fireAngle: 180
+  numberOfBulletsPerArray: 3
+  individualArraySpread: 19
+  totalBulletArrays: 2
+  totalArraySpread: 82
+  enableSpin: 0
+  currentSpinSpeed: 0
+  spinSpeedChangeRate: 0
+  maxSpinSpeed: 180
+  spinReversal: 1
+  sineAmplitude: 2.22
+  sineFrequency: 5.28
   enableSineWave: 0
+  cosineAmplitude: 2.18
+  cosineFrequency: 3.89
+  enableCosineWave: 0
   enableSpiral: 0
-  spiralSpeed: 45
+  spiralSpeed: 120
   spiralClockwise: 1
   enableHoming: 0
   maxStops: 1
   stopDuration: 0.1
-  initialMovementTime: 0.5
+  initialMovementTime: 1
   curveDuration: 0.2

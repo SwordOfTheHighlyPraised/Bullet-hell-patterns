@@ -6,6 +6,7 @@ public class BulletCollision : MonoBehaviour
     public LayerMask collisionLayers;  // Define which layers the bullet can collide with
     public bool destroyOnImpact = true;  // Whether the bullet should be destroyed on impact
     public bool destroyOnWorldEdge = true; // Destroy bullet if it hits the world edge
+    public int damageAmount = 10;  // Damage dealt by the bullet on impact
 
     private void OnTriggerEnter2D(Collider2D other)
     {
@@ -33,9 +34,14 @@ public class BulletCollision : MonoBehaviour
     {
         Destroy(gameObject);  // Destroy the bullet
     }
-
     private void HandleCollision(Collider2D other)
     {
-        // Additional collision effects can be added here (e.g., damage, sounds, etc.)
+        // Check if the object has a Health component to apply damage
+        Health healthComponent = other.GetComponent<Health>();
+        if (healthComponent != null)
+        {
+            // Apply damage to the object
+                healthComponent.TakeDamage(damageAmount);
+        }
     }
 }
