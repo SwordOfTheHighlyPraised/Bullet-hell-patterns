@@ -20,7 +20,7 @@ MonoBehaviour:
   objectHeight: 1
   xOffset: 0
   yOffset: 0
-  moveToPlayer: 0
+  moveToPlayer: 1
   fireAngle: 241.22415
   numberOfBulletsPerArray: 2
   individualArraySpread: 1

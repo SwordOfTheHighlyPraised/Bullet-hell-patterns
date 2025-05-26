@@ -114,9 +114,9 @@ public class BossController : MonoBehaviour
         if (stateTimer <= 0f)
         {
             // Randomly choose either Pattern 1, Pattern 2, Pattern 3 or Pattern 4 for the attack
-            int chosenPattern = Random.Range(1, 5);  // Random number between 1 and 4
+            int chosenPattern = Random.Range(1, 2);  // Random number between 1 and 2
 
-            // Start with either AttackPattern1, AttackPattern2, or AttackPattern3
+            // Start with either AttackPattern1 or AttackPattern2
             if (chosenPattern == 1)
             {
                 lastPatternWas1 = true;
