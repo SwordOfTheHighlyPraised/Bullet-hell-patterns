@@ -29,7 +29,7 @@ public class EnemyController : MonoBehaviour
     {
         // Simple AI for moving left and right.
         float moveDirection = Mathf.PingPong(Time.time * moveSpeed, 2) - 1;  // Move back and forth.
-        rb.velocity = new Vector2(moveDirection * moveSpeed, rb.velocity.y);
+        rb.linearVelocity = new Vector2(moveDirection * moveSpeed, rb.linearVelocity.y);
 
         // Check for jumping logic (optional, e.g., for patrolling over platforms).
         if (isGrounded && Random.value < 0.01f)  // Randomly jump if on the ground.

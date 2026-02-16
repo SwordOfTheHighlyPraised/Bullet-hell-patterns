@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7a28f9f450d3ef409c29a96c24ca0a3, type: 3}
+  m_Name: BurstPattern 1
+  m_EditorClassIdentifier: 
+  bulletPrefab: {fileID: 2009350144482145695, guid: 5351e8a72579c59488dda12cda354a0a, type: 3}
+  bulletSpeed: 1
+  acceleration: 2
+  bulletLifespan: 3
+  objectWidth: 0.1
+  objectHeight: 0.1
+  xOffset: 0
+  yOffset: 0
+  moveToPlayer: 0
+  fireAngle: 0
+  numberOfBulletsPerArray: 1
+  individualArraySpread: 1
+  totalBulletArrays: 1
+  totalArraySpread: 0
+  enableSpin: 0
+  currentSpinSpeed: 0
+  spinSpeedChangeRate: 10
+  maxSpinSpeed: 20
+  spinReversal: 1
+  sineAmplitude: 2.1
+  sineFrequency: -7.6
+  enableSineWave: 0
+  cosineAmplitude: 3.5
+  cosineFrequency: -4.8
+  enableCosineWave: 0
+  enableSpiral: 0
+  spiralSpeed: 326
+  spiralClockwise: 0
+  enableHoming: 0
+  maxStops: 1
+  stopDuration: 1
+  initialMovementTime: 1
+  curveDuration: 0.5
+  homingStyleAllPhases: 0
+  bulletsPerLocation: 12
+  burstCount: 4
+  burstFireRate: 0.1
+  burstCountRate: 0.2
+  fireOffsets:
+  - {x: 1, y: -1}
+  - {x: -1, y: 1}
+  spinAdvanceMode: 0

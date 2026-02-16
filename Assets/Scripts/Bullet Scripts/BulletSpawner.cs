@@ -268,7 +268,7 @@ public class BulletSpawner : MonoBehaviour
                 if (bulletRb != null)
                 {
                     // Start the bullet with an initial speed based on bulletSpeed
-                    bulletRb.velocity = new Vector2(
+                    bulletRb.linearVelocity = new Vector2(
                         Mathf.Cos(bulletAngle * Mathf.Deg2Rad) * bulletSpeed,
                         Mathf.Sin(bulletAngle * Mathf.Deg2Rad) * bulletSpeed
                     );
@@ -332,7 +332,7 @@ public class BulletSpawner : MonoBehaviour
                     if (bulletRb != null)
                     {
                         // Start the bullet with an initial speed based on bulletSpeed
-                        bulletRb.velocity = new Vector2(
+                        bulletRb.linearVelocity = new Vector2(
                             Mathf.Cos(finalRotation * Mathf.Deg2Rad) * bulletSpeed,
                             Mathf.Sin(finalRotation * Mathf.Deg2Rad) * bulletSpeed
                         );
@@ -406,7 +406,7 @@ public class BulletSpawner : MonoBehaviour
 
         // 2. Stop the bullet for a moment
         if (bulletTransform == null) yield break;
-        bulletTransform.GetComponent<Rigidbody2D>().velocity = Vector2.zero;
+        bulletTransform.GetComponent<Rigidbody2D>().linearVelocity = Vector2.zero;
 
         // 3. Home in towards the player for 0.5 seconds
         elapsedTime = 0f;

@@ -1,3 +1,4 @@
+// BurstPattern.cs
 using System.Collections;
 using UnityEngine;
 
@@ -5,122 +6,205 @@ using UnityEngine;
 public class BurstPattern : BulletPatternBase
 {
     [Header("Burst Settings")]
-    public int bulletsPerLocation = 2;  // Number of bullets to fire from the same location before switching
-    public int burstCount = 6;          // Total number of burst sequences to fire
-    public float burstFireRate = 0.1f;  // Time between bullets in a burst
-    public float burstCountRate = 0.5f; // Time between each burst sequence
+    public int bulletsPerLocation = 2;
+    public int burstCount = 6;
+    public float burstFireRate = 0.1f;
+    public float burstCountRate = 0.5f;
 
     [Header("Offset Settings")]
-    public Vector2[] fireOffsets;  // Array of offsets for alternating burst positions
+    public Vector2[] fireOffsets;
 
-    public override void Fire(Transform firePoint, Transform player = null)
+    public enum SpinAdvanceMode
     {
-        if (player == null) return;
-
-        MonoBehaviour monoBehaviour = firePoint.GetComponent<MonoBehaviour>();
-        if (monoBehaviour != null)
-        {
-            monoBehaviour.StartCoroutine(FireBurst(firePoint, player));
-        }
+        PerBurst,
+        PerArray,
+        PerDirection,
+        PerBulletInstance
     }
 
-    private IEnumerator FireBurst(Transform firePoint, Transform player)
+    [Header("Spin Settings (Burst)")]
+    // Default as requested: currentSpinSpeed advances per burst
+    public SpinAdvanceMode spinAdvanceMode = SpinAdvanceMode.PerBurst;
+
+    // Used by BulletSpawnerV3 to prevent overlapping Fire() calls for this pattern
+    public float GetRecommendedMinRefireDelay()
     {
-        int currentOffsetIndex = 0;
+        int arrays = Mathf.Max(1, totalBulletArrays);
+        int bulletsPerArray = Mathf.Max(1, numberOfBulletsPerArray);
+        int perLoc = Mathf.Max(1, bulletsPerLocation);
+        int bursts = Mathf.Max(1, burstCount);
 
-        // Loop through each burst sequence
-        for (int i = 0; i < burstCount; i++)
+        int shotsPerBurst = arrays * bulletsPerArray * perLoc;
+
+        // Waits between shots inside a burst (no trailing wait after final shot)
+        float intraBurst = Mathf.Max(0, shotsPerBurst - 1) * Mathf.Max(0f, burstFireRate);
+
+        // Waits between bursts (no trailing wait after final burst)
+        float interBurst = Mathf.Max(0, bursts - 1) * Mathf.Max(0f, burstCountRate);
+
+        return (bursts * intraBurst) + interBurst;
+    }
+
+    public override void Fire(Transform firePoint, Transform player, MonoBehaviour runner, BulletPatternRuntimeState state)
+    {
+        if (firePoint == null || bulletPrefab == null) return;
+        if (moveToPlayer && player == null) return;
+
+        if (state == null)
         {
-            // Calculate spin and update fireAngle before firing bullets in the burst
-            if (enableSpin)
+            state = new BulletPatternRuntimeState();
+            state.ResetFromConfig(this);
+        }
+
+        if (runner == null)
+            runner = firePoint.GetComponentInParent<MonoBehaviour>();
+
+        if (runner == null)
+        {
+            Debug.LogWarning($"[BurstPattern] No coroutine runner found for pattern '{name}'.", this);
+            return;
+        }
+
+        if (!enableSpin)
+            state.fireAngle = fireAngle;
+
+        bool aimMode = moveToPlayer && player != null;
+        runner.StartCoroutine(FireBurstRoutine(firePoint, player, runner, state, aimMode));
+    }
+
+    private IEnumerator FireBurstRoutine(
+        Transform firePoint,
+        Transform player,
+        MonoBehaviour runner,
+        BulletPatternRuntimeState state,
+        bool aimMode)
+    {
+        int arrays = Mathf.Max(1, totalBulletArrays);
+        int bulletsPerArray = Mathf.Max(1, numberOfBulletsPerArray);
+        int perLoc = Mathf.Max(1, bulletsPerLocation);
+        int totalBursts = Mathf.Max(1, burstCount);
+
+        int offsetCount = (fireOffsets != null) ? fireOffsets.Length : 0;
+        int offsetIndex = 0;
+
+        WaitForSeconds waitPerBullet = burstFireRate > 0f ? new WaitForSeconds(burstFireRate) : null;
+        WaitForSeconds waitPerBurst = burstCountRate > 0f ? new WaitForSeconds(burstCountRate) : null;
+
+        bool stepPerBurst = spinAdvanceMode == SpinAdvanceMode.PerBurst;
+        bool stepPerArray = spinAdvanceMode == SpinAdvanceMode.PerArray;
+        bool stepPerDir = spinAdvanceMode == SpinAdvanceMode.PerDirection;
+        bool stepPerInstance = spinAdvanceMode == SpinAdvanceMode.PerBulletInstance;
+
+        int shotsPerBurst = arrays * bulletsPerArray * perLoc;
+
+        for (int burst = 0; burst < totalBursts; burst++)
+        {
+            if (firePoint == null) yield break;
+
+            Vector2 off = (offsetCount > 0) ? fireOffsets[offsetIndex] : Vector2.zero;
+            int emittedThisBurst = 0;
+
+            for (int arrayIndex = 0; arrayIndex < arrays; arrayIndex++)
             {
-                // Update the fireAngle based on the current spin speed
-                fireAngle += currentSpinSpeed;
+                float arrayRotationOffset = GetAnchoredArrayOffset(arrayIndex, arrays, totalArraySpread);
 
-                // Update the spin speed based on the spin change rate
-                currentSpinSpeed += spinSpeedChangeRate;
-
-                // Clamp the spin speed to the max spin speed
-                currentSpinSpeed = Mathf.Clamp(currentSpinSpeed, -maxSpinSpeed, maxSpinSpeed);
-
-                // Reverse the spin direction if it reaches the max or min spin speed
-                if (spinReversal && (Mathf.Abs(currentSpinSpeed) >= maxSpinSpeed))
+                for (int bulletIndex = 0; bulletIndex < bulletsPerArray; bulletIndex++)
                 {
-                    spinSpeedChangeRate = -spinSpeedChangeRate; // Reverse spin direction
-                }
-
-                // Normalize the fireAngle to stay within 0-359 degrees
-                fireAngle = fireAngle % 360f;
-                if (fireAngle < 0f)
-                {
-                    fireAngle += 360f;
-                }
-            }
-
-            // Fire for each array in the current burst
-            for (int arrayIndex = 0; arrayIndex < totalBulletArrays; arrayIndex++)
-            {
-                // Offset for different bullet arrays (rotates around a central point)
-                float arrayRotationOffset = (arrayIndex - (totalBulletArrays / 2f)) * totalArraySpread;
-
-                // Calculate directionToPlayer if moveToPlayer is enabled
-                Vector3 directionToFire;
-                if (moveToPlayer && player != null)
-                {
-                    // Get direction to the player for the entire array
-                    directionToFire = (player.position - firePoint.position).normalized;
-                }
-                else
-                {
-                    // Use fireAngle + array offset if not moving to the player
-                    directionToFire = GetDirectionFromAngle(fireAngle + arrayRotationOffset, firePoint, player);
-                }
-
-                // Fire bulletsPerLocation bullets from the same offset position
-                for (int j = 0; j < bulletsPerLocation; j++)
-                {
-                    // Calculate the offset position based on fireOffsets array and apply the X and Y offsets
-                    Vector3 offsetPosition = new Vector3(
-                        firePoint.position.x + xOffset + fireOffsets[currentOffsetIndex].x, // Apply X offset
-                        firePoint.position.y + yOffset + fireOffsets[currentOffsetIndex].y, // Apply Y offset
-                        firePoint.position.z
+                    float bulletOffset = GetBulletOffsetWithinArray(
+                        bulletIndex,
+                        bulletsPerArray,
+                        individualArraySpread
                     );
 
-                    // Instantiate a bullet at the offset position
-                    GameObject bullet = Instantiate(bulletPrefab, offsetPosition, Quaternion.identity);
+                    for (int j = 0; j < perLoc; j++)
+                    {
+                        if (firePoint == null) yield break;
 
-                    // Adjust the bullet size
-                    bullet.transform.localScale = new Vector3(objectWidth, objectHeight, 1f); // Set the bullet size
+                        float baseAngle = ComputeBurstBaseAngle(firePoint, player, state, aimMode);
+                        float castAngle = NormalizeAngle(baseAngle + arrayRotationOffset + bulletOffset);
+                        Vector3 finalDirection = GetDirectionFromAngle(castAngle, firePoint, null);
 
-                    // Adjust the direction slightly for the array spread
-                    Vector3 finalDirection = Quaternion.Euler(0, 0, arrayRotationOffset) * directionToFire;
+                        Vector3 spawnPosition = new Vector3(
+                            firePoint.position.x + xOffset + off.x,
+                            firePoint.position.y + yOffset + off.y,
+                            firePoint.position.z
+                        );
 
-                    // Initialize the bullet to follow the movement settings (sine, spiral, etc.)
-                    InitializeBurstBullet(bullet, finalDirection, i % 2 == 0, firePoint, player);
+                        GameObject bullet = CreateBullet(spawnPosition);
+                        bool spiralCW = (burst % 2 == 0);
 
-                    // Destroy the bullet after the specified lifespan
-                    Destroy(bullet, bulletLifespan);  // Destroy the bullet after its lifespan expires
+                        InitializeBullet(
+                            bullet,
+                            firePoint,
+                            player,
+                            finalDirection,
+                            runner,
+                            state,
+                            spiralClockwiseOverride: spiralCW
+                        );
 
-                    yield return new WaitForSeconds(burstFireRate);  // Wait between bullets in the same burst
+                        Destroy(bullet, bulletLifespan);
+
+                        emittedThisBurst++;
+
+                        if (stepPerInstance)
+                            StepBurstSpin(state);
+
+                        // no trailing bullet wait after last shot in burst
+                        if (waitPerBullet != null && emittedThisBurst < shotsPerBurst)
+                            yield return waitPerBullet;
+                    }
+
+                    if (stepPerDir)
+                        StepBurstSpin(state);
                 }
+
+                if (stepPerArray)
+                    StepBurstSpin(state);
             }
 
-            // Switch to the next offset position
-            currentOffsetIndex = (currentOffsetIndex + 1) % fireOffsets.Length;
+            if (offsetCount > 0)
+                offsetIndex = (offsetIndex + 1) % offsetCount;
 
-            // Wait between burst sequences
-            yield return new WaitForSeconds(burstCountRate);
+            if (stepPerBurst)
+                StepBurstSpin(state);
+
+            // no trailing burst wait after final burst
+            if (waitPerBurst != null && burst < totalBursts - 1)
+                yield return waitPerBurst;
         }
     }
 
-    // Initialize the bullet and follow base movement settings (sine wave, spiral, etc.)
-    private void InitializeBurstBullet(GameObject bullet, Vector3 directionToFire, bool spiralClockwise, Transform firePoint, Transform player)
+    private float ComputeBurstBaseAngle(
+        Transform firePoint,
+        Transform player,
+        BulletPatternRuntimeState state,
+        bool aimMode)
     {
-        // Temporarily set the spiral direction for this bullet
-        BulletPatternBase patternBase = this;
-        patternBase.spiralClockwise = spiralClockwise;
+        if (aimMode && player != null)
+        {
+            Vector2 toPlayer = (Vector2)(player.position - firePoint.position);
+            float playerAngle = (toPlayer.sqrMagnitude > 0.0001f)
+                ? Mathf.Atan2(toPlayer.y, toPlayer.x) * Mathf.Rad2Deg
+                : fireAngle;
 
-        // Initialize the bullet using the base class method with movement settings
-        InitializeBullet(bullet, firePoint, player, directionToFire);  // Pass directionToFire
+            float spinOffset = Mathf.DeltaAngle(fireAngle, state.fireAngle);
+            return NormalizeAngle(playerAngle + spinOffset);
+        }
+
+        return state.fireAngle;
+    }
+
+    private void StepBurstSpin(BulletPatternRuntimeState state)
+    {
+        if (!enableSpin || state == null) return;
+
+        state.fireAngle = NormalizeAngle(state.fireAngle + state.currentSpinSpeed);
+
+        state.currentSpinSpeed += state.spinSpeedChangeRate;
+        state.currentSpinSpeed = Mathf.Clamp(state.currentSpinSpeed, -maxSpinSpeed, maxSpinSpeed);
+
+        if (spinReversal && Mathf.Abs(state.currentSpinSpeed) >= maxSpinSpeed)
+            state.spinSpeedChangeRate = -state.spinSpeedChangeRate;
     }
 }

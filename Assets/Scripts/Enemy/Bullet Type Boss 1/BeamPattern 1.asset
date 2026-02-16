@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99683eef294d16a43a67ea7889065029, type: 3}
+  m_Name: BeamPattern 1
+  m_EditorClassIdentifier: 
+  bulletPrefab: {fileID: 0}
+  bulletSpeed: 15
+  acceleration: 0
+  bulletLifespan: 2
+  objectWidth: 1
+  objectHeight: 1
+  xOffset: 0
+  yOffset: 0
+  moveToPlayer: 0
+  fireAngle: 180
+  numberOfBulletsPerArray: 4
+  individualArraySpread: 360
+  totalBulletArrays: 1
+  totalArraySpread: 90
+  enableSpin: 1
+  currentSpinSpeed: 45
+  spinSpeedChangeRate: 0
+  maxSpinSpeed: 90
+  spinReversal: 1
+  sineAmplitude: -2.6
+  sineFrequency: 3
+  enableSineWave: 0
+  cosineAmplitude: 3.7
+  cosineFrequency: 6.8
+  enableCosineWave: 0
+  enableSpiral: 0
+  spiralSpeed: 297
+  spiralClockwise: 1
+  enableHoming: 0
+  maxStops: 1
+  stopDuration: 1
+  initialMovementTime: 1
+  curveDuration: 0.5
+  homingStyleAllPhases: 0
+  beamTelegraphPrefab: {fileID: 7861506241799461589, guid: 76823765234ca5a41a06b708890bd4ef, type: 3}
+  telegraphDuration: 0.4
+  beamRootPrefab: {fileID: 6404715563589925760, guid: b48f810492333d94abe2e0d339398bb2, type: 3}
+  beamSegmentPrefab: {fileID: 6404715563589925760, guid: 1ee361dafff50b0488fd9b2e48a0aab5, type: 3}
+  beamDuration: 3
+  beamWidth: 1
+  beamRange: 10
+  yOffsetBeam: 0
+  growthDuration: 1
+  pivotOffset: {x: 0, y: 0, z: 0}
+  resetAngleAfterBeam: 1
+  trackPlayerDuringTelegraph: 1
+  lockBeamToTelegraphFinalAngle: 1
+  useInterBeamDelay: 0
+  interBeamDelay: 0.2
+  interBeamOrder: 0
+  delayedBeamsSpinIndependently: 0
+  despawnMode: 0

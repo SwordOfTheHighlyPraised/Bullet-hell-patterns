@@ -7,107 +7,106 @@ public class SpreadPattern : BulletPatternBase
     public int bulletCount = 5;               // Number of bullets to fire in the spread
     public float spreadAngle = 45f;           // Total angle of the spread (degrees)
     public float spreadDistance = 1f;         // Distance of the bullets from the fire point
-
-    public override void Fire(Transform firePoint, Transform player = null)
+                                              
+    public override void Fire(Transform firePoint, Transform player, MonoBehaviour runner, BulletPatternRuntimeState state)
     {
-        // Adjust fireAngle based on spin before firing any bullets
-        if (enableSpin)
+        if (firePoint == null || bulletPrefab == null) return;
+
+        if (state == null)
         {
-            // Update fireAngle based on spin logic
-            fireAngle += currentSpinSpeed;
-
-            // Update the spin speed based on the spin change rate
-            currentSpinSpeed += spinSpeedChangeRate;
-
-            // Clamp the spin speed to the max spin speed
-            currentSpinSpeed = Mathf.Clamp(currentSpinSpeed, -maxSpinSpeed, maxSpinSpeed);
-
-            // Reverse the spin direction if necessary
-            if (spinReversal && (Mathf.Abs(currentSpinSpeed) >= maxSpinSpeed))
-            {
-                spinSpeedChangeRate = -spinSpeedChangeRate; // Reverse the spin direction
-            }
-
-            // Normalize the fireAngle to keep it within the 0-359 range
-            fireAngle = fireAngle % 360f;
-            if (fireAngle < 0f)
-            {
-                fireAngle += 360f;
-            }
+            state = new BulletPatternRuntimeState();
+            state.ResetFromConfig(this);
         }
 
-        // Loop through each bullet array
-        for (int arrayIndex = 0; arrayIndex < totalBulletArrays; arrayIndex++)
+        if (runner == null)
+            runner = firePoint.GetComponentInParent<MonoBehaviour>();
+
+        int arrays = Mathf.Max(1, totalBulletArrays);
+        int count = Mathf.Max(1, bulletCount);
+        int bulletsPerArray = Mathf.Max(count, numberOfBulletsPerArray);
+
+        bool aimMode = moveToPlayer && player != null;
+
+        // Slider is authoritative when spin is OFF
+        if (!enableSpin)
+            state.fireAngle = fireAngle;
+
+        // Aim+Spin: seed only first shot from player
+        if (aimMode && enableSpin && !state.hasSeededFromPlayer)
         {
-            // Offset for different bullet arrays (rotates around a central point)
-            float arrayRotationOffset = (arrayIndex - (totalBulletArrays / 2f)) * totalArraySpread;
+            Vector2 toPlayerSeed = (player.position - firePoint.position);
+            state.fireAngle = NormalizeAngle(Mathf.Atan2(toPlayerSeed.y, toPlayerSeed.x) * Mathf.Rad2Deg);
+            state.hasSeededFromPlayer = true;
+        }
 
-            // Calculate the base direction towards the player or based on fireAngle
-            Vector3 baseDirection;
+        // Seed spin center once
+        if (enableSpin && !state.spinCenterSeeded)
+        {
+            state.spinCenterAngle = state.fireAngle;
+            state.spinOffset = 0f;
+            state.spinStep = Mathf.Abs(currentSpinSpeed);
+            if (state.spinStep < 0.0001f) state.spinStep = 1f;
+            state.spinDirection = (spinSpeedChangeRate < 0f) ? -1 : 1;
+            state.spinCenterSeeded = true;
+        }
 
-            // If moveToPlayer is true, adjust each array's direction to point towards the player
-            if (moveToPlayer && player != null)
+        // Base angle per shot:
+        // - aimMode + spin ON => frozen seeded/spun angle
+        // - aimMode + spin OFF => live player tracking
+        // - manual mode => state.fireAngle
+        float baseAngle;
+        if (aimMode)
+        {
+            if (enableSpin)
             {
-                // Calculate direction toward the player and apply the array rotation offset
-                Vector3 directionToPlayer = (player.position - firePoint.position).normalized;
-                baseDirection = Quaternion.Euler(0, 0, arrayRotationOffset) * directionToPlayer;
+                baseAngle = state.fireAngle;
             }
             else
             {
-                // Use fireAngle for array rotation if not targeting the player
-                baseDirection = GetDirectionFromAngle(fireAngle + arrayRotationOffset, firePoint, player);
+                Vector2 toPlayerNow = (player.position - firePoint.position);
+                baseAngle = NormalizeAngle(Mathf.Atan2(toPlayerNow.y, toPlayerNow.x) * Mathf.Rad2Deg);
             }
+        }
+        else
+        {
+            baseAngle = state.fireAngle;
+        }
 
-            // Calculate the starting angle for the spread (centered on the fire direction)
-            float startAngle = -spreadAngle / 2f;
-            float angleStep = spreadAngle / (bulletCount - 1);
+        float startAngle = (count == 1) ? 0f : -spreadAngle * 0.5f;
+        float angleStep = (count == 1) ? 0f : (spreadAngle / (count - 1));
 
-            // Loop through and instantiate each bullet in the spread for the current array
-            for (int i = 0; i < bulletCount; i++)
+        for (int arrayIndex = 0; arrayIndex < arrays; arrayIndex++)
+        {
+            float arrayRotationOffset = GetAnchoredArrayOffset(arrayIndex, arrays, totalArraySpread);
+
+            for (int bulletIndex = 0; bulletIndex < bulletsPerArray; bulletIndex++)
             {
-                // Calculate the angle for each bullet relative to the center of the spread
-                float currentAngle = startAngle + (i * angleStep);
+                float bulletOffset = GetBulletOffsetWithinArray(
+                    bulletIndex,
+                    bulletsPerArray,
+                    spreadAngle
+                );
 
-                // Calculate the direction for each bullet relative to the array's direction
-                Vector3 bulletDirection = Quaternion.Euler(0, 0, currentAngle) * baseDirection;
+                float spreadOffset = arrayRotationOffset + bulletOffset;
+                float finalRotation = baseAngle + spreadOffset;
 
-                // Adjust the spawn position based on spreadDistance and apply the X and Y offsets
+                Vector3 directionToFire = GetDirectionFromAngle(finalRotation, firePoint, null);
+
                 Vector3 spawnPosition = new Vector3(
-                    firePoint.position.x + xOffset + (bulletDirection.normalized * spreadDistance).x, // Apply X offset
-                    firePoint.position.y + yOffset + (bulletDirection.normalized * spreadDistance).y, // Apply Y offset
+                    firePoint.position.x + xOffset,
+                    firePoint.position.y + yOffset,
                     firePoint.position.z
                 );
 
-                // Instantiate the bullet at the adjusted spawn position
-                GameObject bullet = Instantiate(bulletPrefab, spawnPosition, Quaternion.identity);
-
-                // Adjust the size of the bullet
-                bullet.transform.localScale = new Vector3(objectWidth, objectHeight, 1f); // Set the bullet size
-
-                // Initialize the bullet with the direction
-                InitializeBullet(bullet, firePoint, player, bulletDirection);
-
-                // Destroy the bullet after the lifespan ends
+                GameObject bullet = CreateBullet(spawnPosition);
+                InitializeBullet(bullet, firePoint, player, directionToFire, runner, state);
                 Destroy(bullet, bulletLifespan);
-
-                // Apply sine wave or spiral movement if enabled
-                MonoBehaviour monoBehaviour = bullet.GetComponent<MonoBehaviour>();
-                if (monoBehaviour != null)
-                {
-                    // Apply sine wave movement if enabled
-                    if (enableSineWave)
-                    {
-                        monoBehaviour.StartCoroutine(MoveBulletWithSineWave(bullet.transform, bulletDirection));
-                    }
-
-                    // Apply spiral movement if enabled
-                    if (enableSpiral)
-                    {
-                        Vector3 origin = bullet.transform.position;
-                        monoBehaviour.StartCoroutine(SpiralBulletOutward(bullet.transform, origin, bulletDirection, bulletSpeed, spiralSpeed, spiralClockwise));
-                    }
-                }
             }
         }
+
+        // Advance spin for next shot
+        if (enableSpin)
+            ApplySpinPerShot(state);
     }
+
 }

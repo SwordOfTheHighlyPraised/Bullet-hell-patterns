@@ -16,7 +16,7 @@ public class BulletPattern : ScriptableObject
             float angle = spreadAngle / numberOfBullets * i;
             Quaternion rotation = Quaternion.Euler(0, 0, angle);
             GameObject bullet = Instantiate(bulletPrefab, origin.position, rotation);
-            bullet.GetComponent<Rigidbody2D>().velocity = bullet.transform.up * bulletSpeed;
+            bullet.GetComponent<Rigidbody2D>().linearVelocity = bullet.transform.up * bulletSpeed;
         }
     }
 }
